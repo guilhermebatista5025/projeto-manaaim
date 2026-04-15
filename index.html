@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PDV Pro — Sistema de Ponto de Venda</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+</head>
+<body>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <span class="logo-icon"><i class="fa-solid fa-cash-register"></i></span>
+      <span class="logo-text">PDV<strong>Pro</strong></span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-item active" data-section="pdv">
+        <i class="fa-solid fa-cart-shopping"></i><span>PDV</span>
+      </a>
+      <a href="#" class="nav-item" data-section="vendedores">
+        <i class="fa-solid fa-users"></i><span>Vendedores</span>
+      </a>
+      <a href="#" class="nav-item" data-section="estoque">
+        <i class="fa-solid fa-boxes-stacked"></i><span>Estoque</span>
+      </a>
+      <a href="#" class="nav-item" data-section="relatorios">
+        <i class="fa-solid fa-chart-bar"></i><span>Relatórios</span>
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <span class="version-badge">v2.0</span>
+    </div>
+  </aside>
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <button class="hamburger" id="hamburger" aria-label="Menu">
+      <i class="fa-solid fa-bars"></i>
+    </button>
+    <div class="topbar-title" id="topbar-title">Ponto de Venda</div>
+    <div class="topbar-actions">
+      <div class="clock" id="clock"></div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content">
+
+    <!-- ===================== SEÇÃO PDV ===================== -->
+    <section class="section active" id="section-pdv">
+      <div class="section-header">
+        <h1>Ponto de Venda</h1>
+        <p class="section-sub">Registre vendas rapidamente</p>
+      </div>
+
+      <div class="pdv-layout">
+        <!-- Painel esquerdo: seleção de vendedor + produtos -->
+        <div class="pdv-products-panel">
+          <div class="card">
+            <div class="card-header">
+              <i class="fa-solid fa-user-tag"></i> Vendedor Ativo
+            </div>
+            <div class="card-body">
+              <select id="pdv-vendedor-select" class="input-styled">
+                <option value="">— Selecione um vendedor —</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="card mt-16" id="pdv-produtos-card">
+            <div class="card-header">
+              <i class="fa-solid fa-list"></i> Produtos Disponíveis
+            </div>
+            <div class="card-body">
+              <div id="pdv-produto-lista">
+                <div class="empty-state">
+                  <i class="fa-solid fa-store-slash"></i>
+                  <p>Selecione um vendedor para ver os produtos</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Painel direito: carrinho + pagamento -->
+        <div class="pdv-cart-panel">
+          <div class="card">
+            <div class="card-header">
+              <i class="fa-solid fa-receipt"></i> Carrinho
+              <button class="btn-icon btn-danger-ghost" id="btn-limpar-carrinho" title="Limpar carrinho">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </div>
+            <div class="card-body">
+              <div id="pdv-carrinho-lista">
+                <div class="empty-state">
+                  <i class="fa-solid fa-cart-shopping"></i>
+                  <p>Carrinho vazio</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card mt-16">
+            <div class="card-header">
+              <i class="fa-solid fa-money-bill-wave"></i> Pagamento
+            </div>
+            <div class="card-body">
+              <div class="totais-grid">
+                <div class="total-row">
+                  <span>Subtotal</span>
+                  <span id="pdv-subtotal">R$ 0,00</span>
+                </div>
+                <div class="total-row total-destaque">
+                  <span>Total</span>
+                  <span id="pdv-total">R$ 0,00</span>
+                </div>
+              </div>
+              <div class="payment-inputs">
+                <label class="label-styled">Valor Recebido (R$)</label>
+                <input type="number" id="pdv-recebido" class="input-styled" placeholder="0,00" min="0" step="0.01" />
+                <div class="troco-box" id="troco-box">
+                  <span>Troco</span>
+                  <span id="pdv-troco">R$ 0,00</span>
+                </div>
+              </div>
+              <button class="btn-primary btn-full btn-large" id="btn-finalizar-venda">
+                <i class="fa-solid fa-check-circle"></i> Finalizar Venda
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== SEÇÃO VENDEDORES ===================== -->
+    <section class="section" id="section-vendedores">
+      <div class="section-header">
+        <h1>Gestão de Vendedores</h1>
+        <p class="section-sub">Cadastre e gerencie sua equipe</p>
+        <button class="btn-primary" id="btn-novo-vendedor">
+          <i class="fa-solid fa-plus"></i> Novo Vendedor
+        </button>
+      </div>
+
+      <div class="card">
+        <div class="card-body">
+          <div id="vendedores-lista" class="cards-grid"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== SEÇÃO ESTOQUE ===================== -->
+    <section class="section" id="section-estoque">
+      <div class="section-header">
+        <h1>Gestão de Estoque</h1>
+        <p class="section-sub">Produtos por vendedor</p>
+      </div>
+
+      <div class="card mb-16">
+        <div class="card-body">
+          <label class="label-styled">Vendedor</label>
+          <select id="estoque-vendedor-select" class="input-styled" style="max-width:320px">
+            <option value="">— Selecione um vendedor —</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="estoque-painel" style="display:none">
+        <div class="section-header" style="margin-top:0">
+          <h2 id="estoque-vendedor-nome" style="font-size:1.1rem;color:var(--accent)"></h2>
+          <button class="btn-primary" id="btn-novo-produto">
+            <i class="fa-solid fa-plus"></i> Novo Produto
+          </button>
+        </div>
+        <div class="card">
+          <div class="card-body">
+            <div class="table-wrapper">
+              <table class="table-styled" id="estoque-tabela">
+                <thead>
+                  <tr>
+                    <th>Produto</th>
+                    <th>Preço (R$)</th>
+                    <th>Estoque</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="estoque-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== SEÇÃO RELATÓRIOS ===================== -->
+    <section class="section" id="section-relatorios">
+      <div class="section-header">
+        <h1>Relatórios</h1>
+        <p class="section-sub">Análise de desempenho e vendas</p>
+      </div>
+
+      <div class="card mb-16">
+        <div class="card-body filter-row">
+          <div>
+            <label class="label-styled">Filtrar por Vendedor</label>
+            <select id="relatorio-vendedor-select" class="input-styled" style="max-width:280px">
+              <option value="">Todos os vendedores</option>
+            </select>
+          </div>
+          <div class="filter-actions">
+            <button class="btn-primary" id="btn-gerar-relatorio">
+              <i class="fa-solid fa-magnifying-glass"></i> Gerar Relatório
+            </button>
+            <button class="btn-secondary" id="btn-exportar-csv">
+              <i class="fa-solid fa-file-csv"></i> Exportar CSV
+            </button>
+            <button class="btn-secondary" id="btn-imprimir">
+              <i class="fa-solid fa-print"></i> Imprimir
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div id="relatorio-resultado" style="display:none">
+        <!-- KPI Cards -->
+        <div class="kpi-grid" id="relatorio-kpis"></div>
+
+        <!-- Tabela de vendas -->
+        <div class="card mt-16">
+          <div class="card-header"><i class="fa-solid fa-table"></i> Produtos Vendidos</div>
+          <div class="card-body">
+            <div class="table-wrapper">
+              <table class="table-styled" id="relatorio-tabela-vendidos">
+                <thead>
+                  <tr>
+                    <th>Produto</th>
+                    <th>Vendedor</th>
+                    <th>Qtd. Vendida</th>
+                    <th>Preço Unit.</th>
+                    <th>Total</th>
+                  </tr>
+                </thead>
+                <tbody id="relatorio-tbody-vendidos"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabela de estoque restante -->
+        <div class="card mt-16">
+          <div class="card-header"><i class="fa-solid fa-warehouse"></i> Estoque Restante</div>
+          <div class="card-body">
+            <div class="table-wrapper">
+              <table class="table-styled" id="relatorio-tabela-estoque">
+                <thead>
+                  <tr>
+                    <th>Produto</th>
+                    <th>Vendedor</th>
+                    <th>Qtd. Inicial</th>
+                    <th>Vendido</th>
+                    <th>Restante</th>
+                  </tr>
+                </thead>
+                <tbody id="relatorio-tbody-estoque"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===================== MODAL VENDEDOR ===================== -->
+  <div class="modal-overlay" id="modal-vendedor">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-vendedor-titulo">Novo Vendedor</h3>
+        <button class="btn-icon modal-close" data-modal="modal-vendedor">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="vendedor-id-edit" />
+        <label class="label-styled">Nome do Vendedor</label>
+        <input type="text" id="vendedor-nome-input" class="input-styled" placeholder="Ex: João Silva" maxlength="50" />
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary modal-close" data-modal="modal-vendedor">Cancelar</button>
+        <button class="btn-primary" id="btn-salvar-vendedor">
+          <i class="fa-solid fa-floppy-disk"></i> Salvar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== MODAL PRODUTO ===================== -->
+  <div class="modal-overlay" id="modal-produto">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-produto-titulo">Novo Produto</h3>
+        <button class="btn-icon modal-close" data-modal="modal-produto">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="produto-id-edit" />
+        <div class="form-group">
+          <label class="label-styled">Nome do Produto</label>
+          <input type="text" id="produto-nome-input" class="input-styled" placeholder="Ex: Refrigerante 350ml" maxlength="80" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="label-styled">Preço (R$)</label>
+            <input type="number" id="produto-preco-input" class="input-styled" placeholder="0,00" min="0" step="0.01" />
+          </div>
+          <div class="form-group">
+            <label class="label-styled">Quantidade</label>
+            <input type="number" id="produto-qtd-input" class="input-styled" placeholder="0" min="0" step="1" />
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary modal-close" data-modal="modal-produto">Cancelar</button>
+        <button class="btn-primary" id="btn-salvar-produto">
+          <i class="fa-solid fa-floppy-disk"></i> Salvar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== MODAL CONFIRMAÇÃO ===================== -->
+  <div class="modal-overlay" id="modal-confirm">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h3 id="modal-confirm-titulo">Confirmar</h3>
+        <button class="btn-icon modal-close" data-modal="modal-confirm">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p id="modal-confirm-msg"></p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary modal-close" data-modal="modal-confirm">Cancelar</button>
+        <button class="btn-danger" id="btn-confirm-ok">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- OVERLAY MOBILE -->
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
