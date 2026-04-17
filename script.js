@@ -37,7 +37,6 @@ const DB = (() => {
   };
   const deleteVendedor = id => {
     saveVendedores(getVendedores().filter(v => v.id !== id));
-    // remove produtos do vendedor
     saveProdutos(getProdutos().filter(p => p.vendedorId !== id));
   };
   const getVendedorById = id => getVendedores().find(v => v.id === id);
@@ -51,14 +50,12 @@ const DB = (() => {
     const p = { id: genId(), vendedorId, nome: nome.trim(), preco: +preco, qtd: +qtd, qtdInicial: +qtd };
     list.push(p);
     saveProdutos(list);
-    // salva estoque inicial (snapshot)
     _snapshotEstoque(p.id, +qtd);
     return p;
   };
   const updateProduto = (id, nome, preco, qtd) => {
     const list = getProdutos().map(p => {
       if (p.id !== id) return p;
-      // se quantidade aumentou, atualiza snapshot proporcional
       const novaQtd = +qtd;
       if (novaQtd > p.qtd) _snapshotEstoque(id, novaQtd);
       return { ...p, nome: nome.trim(), preco: +preco, qtd: novaQtd };
@@ -74,7 +71,7 @@ const DB = (() => {
     saveProdutos(list);
   };
 
-  // --- Estoque Inicial (snapshot para relatórios) ---
+  // --- Estoque Inicial ---
   const _snapshotEstoque = (produtoId, qtd) => {
     const map = JSON.parse(localStorage.getItem(KEYS.estoque_ini) || '{}');
     map[produtoId] = qtd;
@@ -89,7 +86,7 @@ const DB = (() => {
     const v = {
       id: genId(),
       vendedorId,
-      itens, // [{produtoId, nome, preco, qtd, subtotal}]
+      itens,
       total,
       recebido,
       troco,
@@ -112,7 +109,7 @@ const DB = (() => {
 
 
 /* =====================================================
-   MÓDULO: Utils — Utilitários
+   MÓDULO: Utils
    ===================================================== */
 const Utils = (() => {
   const fmtMoeda = v => `R$ ${Number(v).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`;
@@ -133,7 +130,6 @@ const Utils = (() => {
 const UI = (() => {
   const { $ } = Utils;
 
-  // --- Toast ---
   const toast = (msg, type = 'info') => {
     const icons = { success: 'fa-check-circle', error: 'fa-circle-xmark', info: 'fa-circle-info' };
     const el = document.createElement('div');
@@ -143,7 +139,6 @@ const UI = (() => {
     setTimeout(() => { el.classList.add('fade-out'); setTimeout(() => el.remove(), 350); }, 3000);
   };
 
-  // --- Modal ---
   const openModal = id => {
     const el = $('#' + id);
     if (el) { el.classList.add('open'); el.querySelector('input, select')?.focus(); }
@@ -154,7 +149,6 @@ const UI = (() => {
   };
   const closeAllModals = () => document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
 
-  // Fechar modal ao clicar no overlay
   document.addEventListener('click', e => {
     if (e.target.classList.contains('modal-overlay')) closeAllModals();
     if (e.target.closest('.modal-close')) {
@@ -163,7 +157,6 @@ const UI = (() => {
     }
   });
 
-  // --- Confirm Modal ---
   let _confirmCb = null;
   const confirm = (msg, titulo = 'Confirmar ação', cb) => {
     $('#modal-confirm-msg').textContent = msg;
@@ -176,7 +169,6 @@ const UI = (() => {
     if (_confirmCb) { _confirmCb(); _confirmCb = null; }
   });
 
-  // --- Clock ---
   const startClock = () => {
     const el = $('#clock');
     const tick = () => {
@@ -187,7 +179,6 @@ const UI = (() => {
     setInterval(tick, 1000);
   };
 
-  // --- Populate <select> com vendedores ---
   const populateVendedorSelect = (selId, selectedId = '', emptyLabel = '— Selecione um vendedor —') => {
     const sel = $('#' + selId);
     if (!sel) return;
@@ -291,7 +282,6 @@ const ModVendedores = (() => {
     UI.populateVendedorSelect('relatorio-vendedor-select', '', 'Todos os vendedores');
   };
 
-  // Delegação de eventos no container
   document.addEventListener('click', e => {
     if (e.target.closest('.btn-edit-vendedor')) openEdit(e.target.closest('.btn-edit-vendedor').dataset.id);
     if (e.target.closest('.btn-del-vendedor'))  del(e.target.closest('.btn-del-vendedor').dataset.id);
@@ -380,7 +370,7 @@ const ModEstoque = (() => {
     }
     UI.closeModal('modal-produto');
     renderTabela();
-    ModPDV.renderProdutos(); // atualiza PDV se o mesmo vendedor estiver selecionado
+    ModPDV.renderProdutos();
   };
 
   const del = id => {
@@ -394,7 +384,6 @@ const ModEstoque = (() => {
     });
   };
 
-  // Seleção de vendedor
   $('#estoque-vendedor-select')?.addEventListener('change', e => {
     _vendedorAtivo = e.target.value;
     const painel = $('#estoque-painel');
@@ -425,7 +414,7 @@ const ModEstoque = (() => {
    ===================================================== */
 const ModPDV = (() => {
   const { $, sanitize, fmtMoeda } = Utils;
-  let _carrinho = []; // [{produtoId, nome, preco, qtd, subtotal}]
+  let _carrinho = [];
   let _vendedorId = '';
 
   const renderProdutos = () => {
@@ -468,7 +457,6 @@ const ModPDV = (() => {
     if (isNaN(qtd) || qtd <= 0)       { UI.toast('Informe uma quantidade válida.', 'error'); return; }
     if (qtd > estoque)                 { UI.toast(`Estoque insuficiente (máx. ${estoque}).`, 'error'); return; }
 
-    // verifica se já está no carrinho
     const idx = _carrinho.findIndex(i => i.produtoId === produtoId);
     const novaQtd = idx >= 0 ? _carrinho[idx].qtd + qtd : qtd;
     if (novaQtd > estoque) {
@@ -561,24 +549,17 @@ const ModPDV = (() => {
     }
 
     const troco = recebido - total;
-
-    // Decrementa estoque
     _carrinho.forEach(item => DB.decrementarEstoque(item.produtoId, item.qtd));
-
-    // Registra venda
     DB.addVenda(_vendedorId, [..._carrinho], total, recebido, troco);
 
     UI.toast(`Venda finalizada! Troco: ${fmtMoeda(troco)}`, 'success');
-
-    // Limpa estado
     _carrinho = [];
     $('#pdv-recebido').value = '';
     renderCarrinho();
-    renderProdutos(); // atualiza estoque exibido
-    ModVendedores.render(); // atualiza stats
+    renderProdutos();
+    ModVendedores.render();
   };
 
-  // Eventos
   $('#pdv-vendedor-select')?.addEventListener('change', e => {
     _vendedorId = e.target.value;
     _carrinho = [];
@@ -613,11 +594,10 @@ const ModRelatorios = (() => {
   const gerar = () => {
     const vendedorFiltro = $('#relatorio-vendedor-select').value;
     const todasVendas    = vendedorFiltro ? DB.getVendasByVendedor(vendedorFiltro) : DB.getVendas();
-    const todosVendedores = DB.getVendedores();
     const estoqueInicial = DB.getEstoqueInicial();
 
     // Consolidar produtos vendidos
-    const vendidoMap = {}; // produtoId → { nome, vendedorId, vendedorNome, qtd, preco, total }
+    const vendidoMap = {};
     todasVendas.forEach(venda => {
       const vendedorNome = DB.getVendedorById(venda.vendedorId)?.nome || '—';
       venda.itens.forEach(item => {
@@ -634,12 +614,13 @@ const ModRelatorios = (() => {
       });
     });
 
-    const totalBruto = Object.values(vendidoMap).reduce((acc, v) => acc + v.total, 0);
-    const totalLiquido = totalBruto * (1 - TAXA);
+    const totalBruto     = Object.values(vendidoMap).reduce((acc, v) => acc + v.total, 0);
+    const valorTaxa      = totalBruto * TAXA;           // ← valor real da taxa (10%)
+    const totalLiquido   = totalBruto - valorTaxa;      // bruto − taxa
     const totalQtdVendida = Object.values(vendidoMap).reduce((acc, v) => acc + v.qtd, 0);
+    const numVendas      = todasVendas.length;
 
-    // KPIs
-    const numVendas = todasVendas.length;
+    // KPI Cards — agora com 5 cards incluindo Taxa
     $('#relatorio-kpis').innerHTML = `
       <div class="kpi-card blue">
         <div class="kpi-label">Total Bruto</div>
@@ -650,6 +631,12 @@ const ModRelatorios = (() => {
         <div class="kpi-label">Total Líquido (−10%)</div>
         <div class="kpi-value">${fmtMoeda(totalLiquido)}</div>
         <i class="fa-solid fa-sack-dollar kpi-icon"></i>
+      </div>
+      <div class="kpi-card taxa">
+        <div class="kpi-label">Taxa (10%)</div>
+        <div class="kpi-value">${fmtMoeda(valorTaxa)}</div>
+        <div class="kpi-sub">Bruto − Líquido</div>
+        <i class="fa-solid fa-percent kpi-icon"></i>
       </div>
       <div class="kpi-card yellow">
         <div class="kpi-label">Itens Vendidos</div>
@@ -710,7 +697,6 @@ const ModRelatorios = (() => {
     const vendedorFiltro = $('#relatorio-vendedor-select').value;
     const todasVendas    = vendedorFiltro ? DB.getVendasByVendedor(vendedorFiltro) : DB.getVendas();
 
-    // Linhas de vendas detalhadas
     const rows = [['Data', 'Vendedor', 'Produto', 'Qtd', 'Preço Unit.', 'Subtotal', 'Total Venda', 'Recebido', 'Troco']];
     todasVendas.forEach(venda => {
       const vendedorNome = DB.getVendedorById(venda.vendedorId)?.nome || '—';
@@ -752,6 +738,79 @@ const ModRelatorios = (() => {
 
 
 /* =====================================================
+   MÓDULO: PWA — Service Worker + status de conexão
+   ===================================================== */
+const ModPWA = (() => {
+  const updateOnlineStatus = () => {
+    const el = document.getElementById('pwa-status');
+    if (!el) return;
+    if (navigator.onLine) {
+      el.innerHTML = '<i class="fa-solid fa-wifi" style="color:var(--green);font-size:.75rem"></i> <span style="color:var(--green);font-size:.72rem">Online</span>';
+    } else {
+      el.innerHTML = '<i class="fa-solid fa-wifi-slash" style="color:var(--yellow);font-size:.75rem"></i> <span style="color:var(--yellow);font-size:.72rem">Offline</span>';
+    }
+  };
+
+  const init = () => {
+    // Registra Service Worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js')
+          .then(reg => {
+            console.log('[PWA] Service Worker registrado:', reg.scope);
+
+            // Notifica quando nova versão estiver disponível
+            reg.addEventListener('updatefound', () => {
+              const newWorker = reg.installing;
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  UI.toast('Nova versão disponível! Recarregue para atualizar.', 'info');
+                }
+              });
+            });
+          })
+          .catch(err => console.warn('[PWA] Falha no registro do SW:', err));
+      });
+    }
+
+    // Status online/offline
+    updateOnlineStatus();
+    window.addEventListener('online',  () => { updateOnlineStatus(); UI.toast('Conexão restaurada!', 'success'); });
+    window.addEventListener('offline', () => { updateOnlineStatus(); UI.toast('Modo offline — dados salvos localmente.', 'info'); });
+
+    // Prompt de instalação (Add to Home Screen)
+    let deferredPrompt = null;
+    window.addEventListener('beforeinstallprompt', e => {
+      e.preventDefault();
+      deferredPrompt = e;
+
+      // Mostra botão de instalação no toast após 3s
+      setTimeout(() => {
+        if (deferredPrompt) {
+          const toastEl = document.createElement('div');
+          toastEl.className = 'toast info';
+          toastEl.style.cursor = 'pointer';
+          toastEl.innerHTML = `<i class="fa-solid fa-mobile-screen"></i><span>Instalar PDV Pro no dispositivo</span>`;
+          toastEl.addEventListener('click', () => {
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then(choice => {
+              if (choice.outcome === 'accepted') UI.toast('PDV Pro instalado!', 'success');
+              deferredPrompt = null;
+            });
+            toastEl.remove();
+          });
+          document.getElementById('toast-container').prepend(toastEl);
+          setTimeout(() => { toastEl.classList.add('fade-out'); setTimeout(() => toastEl.remove(), 350); }, 8000);
+        }
+      }, 3000);
+    });
+  };
+
+  return { init };
+})();
+
+
+/* =====================================================
    MÓDULO: App — Inicialização e navegação
    ===================================================== */
 const App = (() => {
@@ -763,22 +822,17 @@ const App = (() => {
   };
 
   const _navigate = sectionId => {
-    // Esconde todas as seções
     document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
 
-    // Ativa seção alvo
     const section = document.getElementById(`section-${sectionId}`);
     if (section) section.classList.add('active');
 
-    // Ativa item de nav
     const navItem = document.querySelector(`.nav-item[data-section="${sectionId}"]`);
     if (navItem) navItem.classList.add('active');
 
-    // Atualiza título topbar
     document.getElementById('topbar-title').textContent = TITLES[sectionId] || '';
 
-    // Fecha sidebar no mobile
     document.getElementById('sidebar').classList.remove('open');
     document.getElementById('sidebar-overlay').classList.remove('open');
   };
@@ -807,7 +861,6 @@ const App = (() => {
   };
 
   const _loadInitialData = () => {
-    // Se não houver dados, cria dados de demonstração
     if (DB.getVendedores().length === 0) {
       _seedDemoData();
     }
@@ -835,12 +888,11 @@ const App = (() => {
     _initNav();
     _initHamburger();
     UI.startClock();
+    ModPWA.init();
 
-    // Popula todos os selects
     ModVendedores._refreshSelects();
     ModVendedores.render();
 
-    // Ativa seção PDV por padrão
     _navigate('pdv');
   };
 
