@@ -738,9 +738,11 @@
 
 
   /* =====================================================
-    MÓDULO: PWA — Service Worker + status de conexão
+    MÓDULO: PWA — Service Worker + Lógica do Banner
     ===================================================== */
   const ModPWA = (() => {
+    let deferredPrompt;
+
     const updateOnlineStatus = () => {
       const el = document.getElementById('pwa-status');
       if (!el) return;
@@ -755,20 +757,8 @@
       // Registra Service Worker
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('./service-worker.js')
-            .then(reg => {
-              console.log('[PWA] Service Worker registrado:', reg.scope);
-
-              // Notifica quando nova versão estiver disponível
-              reg.addEventListener('updatefound', () => {
-                const newWorker = reg.installing;
-                newWorker.addEventListener('statechange', () => {
-                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                    UI.toast('Nova versão disponível! Recarregue para atualizar.', 'info');
-                  }
-                });
-              });
-            })
+          navigator.serviceWorker.register('./sw.js')
+            .then(reg => console.log('[PWA] Service Worker registrado:', reg.scope))
             .catch(err => console.warn('[PWA] Falha no registro do SW:', err));
         });
       }
@@ -778,37 +768,41 @@
       window.addEventListener('online',  () => { updateOnlineStatus(); UI.toast('Conexão restaurada!', 'success'); });
       window.addEventListener('offline', () => { updateOnlineStatus(); UI.toast('Modo offline — dados salvos localmente.', 'info'); });
 
-      // Prompt de instalação (Add to Home Screen)
-      let deferredPrompt = null;
+      // Lógica do Banner Profissional de Instalação
+      const pwaBanner = document.getElementById('pwa-install-banner');
+      const btnInstall = document.getElementById('btn-pwa-install');
+      const btnClose = document.getElementById('btn-pwa-close');
+
       window.addEventListener('beforeinstallprompt', e => {
         e.preventDefault();
         deferredPrompt = e;
-
-        // Mostra botão de instalação no toast após 3s
+        
         setTimeout(() => {
-          if (deferredPrompt) {
-            const toastEl = document.createElement('div');
-            toastEl.className = 'toast info';
-            toastEl.style.cursor = 'pointer';
-            toastEl.innerHTML = `<i class="fa-solid fa-mobile-screen"></i><span>Instalar PDV Pro no dispositivo</span>`;
-            toastEl.addEventListener('click', () => {
-              deferredPrompt.prompt();
-              deferredPrompt.userChoice.then(choice => {
-                if (choice.outcome === 'accepted') UI.toast('PDV Pro instalado!', 'success');
-                deferredPrompt = null;
-              });
-              toastEl.remove();
-            });
-            document.getElementById('toast-container').prepend(toastEl);
-            setTimeout(() => { toastEl.classList.add('fade-out'); setTimeout(() => toastEl.remove(), 350); }, 8000);
-          }
-        }, 3000);
+          if (pwaBanner) pwaBanner.style.display = 'flex';
+        }, 2000);
       });
+
+      if (btnInstall) {
+        btnInstall.addEventListener('click', async () => {
+          if (pwaBanner) pwaBanner.style.display = 'none';
+          if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log(`Usuário escolheu: ${outcome}`);
+            deferredPrompt = null;
+          }
+        });
+      }
+
+      if (btnClose) {
+        btnClose.addEventListener('click', () => {
+          if (pwaBanner) pwaBanner.style.display = 'none';
+        });
+      }
     };
 
     return { init };
   })();
-
 
   /* =====================================================
     MÓDULO: App — Inicialização e navegação
@@ -899,66 +893,7 @@
     return { init };
   })();
 
-
-    /* =====================================================
-   MÓDULO: PWA & App (Registro e Prompt de Instalação)
-   ===================================================== */
-const App = (() => {
-  let deferredPrompt;
-
-  const initPWA = () => {
-    // 1. Registra o Service Worker
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
-          .then(reg => console.log('Service Worker registrado!', reg.scope))
-          .catch(err => console.error('Erro no Service Worker', err));
-      });
-    }
-
-    // 2. Captura o evento de instalação do Chrome
-    window.addEventListener('beforeinstallprompt', (e) => {
-      // Previne o Chrome de mostrar o mini-infobar imediatamente
-      e.preventDefault();
-      // Guarda o evento para acionarmos depois
-      deferredPrompt = e;
-      
-      // Aqui você pode mostrar um botão seu no HTML tipo "Instalar Aplicativo"
-      // Exemplo: $('#btn-instalar').style.display = 'block';
-      
-      // Neste exemplo, vou forçar a pergunta após 3 segundos usando o evento capturado
-      setTimeout(() => {
-        perguntarInstalacao();
-      }, 3000);
-    });
-  };
-
-  const perguntarInstalacao = () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      deferredPrompt.userChoice.then((choiceResult) => {
-        if (choiceResult.outcome === 'accepted') {
-          console.log('Usuário aceitou a instalação do PWA');
-        } else {
-          console.log('Usuário recusou a instalação');
-        }
-        deferredPrompt = null;
-      });
-    }
-  };
-
-  const init = () => {
-    // Inicializações gerais do seu sistema
-    UI.startClock();
-    ModVendedores._refreshSelects();
-    ModVendedores.render();
-    initPWA();
-  };
-
-  return { init, perguntarInstalacao };
-})();
-
-  /* =====================================================
-    INICIALIZAÇÃO
-    ===================================================== */
-  document.addEventListener('DOMContentLoaded', () => App.init());
+  // A MÁGICA ACONTECE AQUI: Inicia o sistema e o menu assim que a página carregar
+  document.addEventListener('DOMContentLoaded', () => {
+    App.init();
+  });
