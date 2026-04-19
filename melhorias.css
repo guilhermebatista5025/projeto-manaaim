@@ -1,0 +1,296 @@
+/* =====================================================
+   PDV Pro — MELHORIAS v2.1
+   Categorias · Filtro PDV · Controle Estoque Zerado
+   ===================================================== */
+
+/* ── Categoria badge (estoque) ── */
+.cat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--cat-cor, #6b7494) 12%, transparent);
+  color: var(--cat-cor, #6b7494);
+  border: 1px solid color-mix(in srgb, var(--cat-cor, #6b7494) 25%, transparent);
+  white-space: nowrap;
+}
+
+.cat-badge i {
+  font-size: 0.7rem;
+}
+
+/* Fallback para browsers sem color-mix */
+@supports not (color: color-mix(in srgb, red, blue)) {
+  .cat-badge {
+    background: rgba(107, 116, 148, 0.1);
+    border-color: rgba(107, 116, 148, 0.25);
+  }
+}
+
+/* ── Row esgotada na tabela estoque ── */
+.row-esgotado td {
+  opacity: 0.6;
+  text-decoration: none;
+}
+
+.row-esgotado .badge-red {
+  font-style: normal;
+}
+
+/* ── Card de Esgotados (Estoque + PDV) ── */
+.esgotados-card,
+.esgotados-mini-card {
+  border-color: rgba(224, 36, 36, 0.25) !important;
+}
+
+.esgotados-header {
+  background: rgba(224, 36, 36, 0.05) !important;
+  color: var(--red) !important;
+  border-bottom-color: rgba(224, 36, 36, 0.15) !important;
+}
+
+.esgotados-header i {
+  color: var(--red) !important;
+}
+
+.esgotados-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--red);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  padding: 0 5px;
+  margin-left: 4px;
+}
+
+/* Grid de itens esgotados */
+.esgotados-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.esgotado-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: var(--bg-card2);
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.esgotado-item:hover {
+  background: rgba(224, 36, 36, 0.04);
+}
+
+.esgotado-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(224, 36, 36, 0.08);
+  color: var(--red);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.esgotado-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.esgotado-nome {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.esgotado-cat {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+
+/* ── Filter bar de categorias (PDV) ── */
+.categoria-filter-bar {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 0 0 12px;
+}
+
+.cat-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 13px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+}
+
+.cat-filter-btn i {
+  font-size: 0.72rem;
+}
+
+.cat-filter-btn:hover {
+  border-color: var(--cat-cor, var(--accent));
+  color: var(--cat-cor, var(--accent));
+  background: color-mix(
+    in srgb,
+    var(--cat-cor, var(--accent)) 8%,
+    var(--bg-card)
+  );
+}
+
+.cat-filter-btn.active {
+  border-color: var(--cat-cor, var(--accent));
+  background: color-mix(in srgb, var(--cat-cor, var(--accent)) 12%, white);
+  color: var(--cat-cor, var(--accent));
+  box-shadow: 0 2px 8px
+    color-mix(in srgb, var(--cat-cor, var(--accent)) 20%, transparent);
+}
+
+/* Fallback */
+@supports not (color: color-mix(in srgb, red, blue)) {
+  .cat-filter-btn.active {
+    border-color: var(--accent);
+    background: var(--accent-glow);
+    color: var(--accent);
+  }
+  .cat-filter-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-glow);
+  }
+}
+
+/* ── Produto item melhorado ── */
+.produto-item {
+  position: relative;
+  overflow: hidden;
+  /* mantém o layout base do style.css */
+}
+
+.produto-cat-strip {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  border-radius: 4px 0 0 4px;
+}
+
+.produto-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.produto-estoque-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 10px;
+}
+
+.produto-estoque-badge.ok {
+  background: var(--green-bg);
+  color: var(--green);
+}
+
+.produto-estoque-badge.baixo {
+  background: var(--yellow-bg);
+  color: var(--yellow);
+}
+
+.produto-estoque-badge.critico {
+  background: var(--red-bg);
+  color: var(--red);
+  animation: blinkCritico 2s ease-in-out infinite;
+}
+
+@keyframes blinkCritico {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* Produto item com estoque crítico */
+.produto-item.estoque-critico {
+  border-color: rgba(224, 36, 36, 0.3);
+}
+
+.produto-item.estoque-baixo {
+  border-color: rgba(217, 119, 6, 0.3);
+}
+
+/* ── Ajuste de coluna extra na tabela estoque ── */
+#estoque-tabela th:nth-child(2),
+#estoque-tabela td:nth-child(2) {
+  min-width: 110px;
+}
+
+/* ── Botão "ver esgotados" no PDV ── */
+.btn-ver-esgotados {
+  transition: transform 0.25s ease;
+}
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  .categoria-filter-bar {
+    gap: 5px;
+  }
+
+  .cat-filter-btn {
+    padding: 5px 10px;
+    font-size: 0.74rem;
+  }
+
+  .esgotados-grid {
+    gap: 5px;
+  }
+
+  .esgotado-item {
+    padding: 7px 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .produto-meta {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+}
