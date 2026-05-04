@@ -1,0 +1,565 @@
+/* =====================================================
+   PDV Pro — MÓDULO RELATÓRIO FINANCEIRO
+   Modal de Entrada · Relatório Completo · Export PDF
+   ===================================================== */
+
+/* ── Separador na filter-actions ── */
+.rf-divider {
+    width: 1px;
+    height: 28px;
+    background: var(--border);
+    margin: 0 4px;
+    flex-shrink: 0;
+}
+
+/* ── MODAL ── */
+.rf-modal {
+    max-width: 600px;
+    width: 95vw;
+}
+
+.rf-modal-body {
+    padding: 0 20px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-height: 72vh;
+    overflow-y: auto;
+}
+
+.rf-modal-body::-webkit-scrollbar {
+    width: 4px;
+}
+
+.rf-modal-body::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 4px;
+}
+
+/* Grupos dentro do modal */
+.rf-group {
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+
+.rf-group-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--bg-card2);
+    border-bottom: 1px solid var(--border-soft);
+}
+
+.rf-group-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+}
+
+.rf-group-header strong {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text);
+    font-family: var(--font-head);
+}
+
+.rf-group-header span {
+    font-size: 0.73rem;
+    color: var(--text-muted);
+}
+
+.rf-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    padding: 14px 16px 0;
+}
+
+.rf-form-row:last-of-type {
+    padding-bottom: 14px;
+}
+
+.rf-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.rf-field label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.45px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.rf-field label i {
+    color: var(--accent);
+    font-size: 0.72rem;
+}
+
+/* Campo calculado */
+.rf-calculado {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+    background: var(--accent-glow);
+    border-top: 1px solid rgba(26, 86, 219, 0.12);
+}
+
+.rf-calculado-label {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--accent);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.rf-calculado-label i {
+    font-size: 0.85rem;
+}
+
+.rf-calculado-hint {
+    font-size: 0.68rem;
+    font-weight: 400;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.rf-calculado-value {
+    flex: 1;
+    min-width: 120px;
+}
+
+.rf-input-calculado {
+    background: var(--bg-card) !important;
+    border-color: rgba(26, 86, 219, 0.25) !important;
+    color: var(--accent) !important;
+    font-family: var(--font-head) !important;
+    font-weight: 700 !important;
+    font-size: 1rem !important;
+    text-align: center;
+    letter-spacing: 0.5px;
+    cursor: default !important;
+}
+
+/* Input inválido */
+.rf-invalid {
+    border-color: var(--red) !important;
+    box-shadow: 0 0 0 3px var(--red-bg) !important;
+}
+
+/* ── RELATÓRIO ── */
+.rf-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 22px;
+    padding-bottom: 18px;
+    border-bottom: 2px solid var(--accent);
+    flex-wrap: wrap;
+    gap: 14px;
+}
+
+.rf-header-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.rf-header-icon {
+    width: 52px;
+    height: 52px;
+    background: var(--accent-glow);
+    border: 1.5px solid rgba(26, 86, 219, 0.2);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    color: var(--accent);
+    flex-shrink: 0;
+}
+
+.rf-titulo {
+    font-family: var(--font-head);
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1.1;
+}
+
+.rf-subtitulo {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-top: 3px;
+}
+
+/* Seções do relatório */
+.rf-secao {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 16px;
+}
+
+.rf-secao-header {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 13px 18px;
+    background: var(--bg-card2);
+    border-bottom: 1px solid var(--border-soft);
+    font-family: var(--font-head);
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.rf-secao-header i {
+    color: var(--accent);
+    font-size: 0.82rem;
+}
+
+/* KPI grid no resumo */
+.rf-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+}
+
+.rf-kpi {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 16px 20px;
+    position: relative;
+}
+
+.rf-kpi+.rf-kpi::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 16px;
+    bottom: 16px;
+    width: 1px;
+    background: var(--border-soft);
+}
+
+.rf-kpi-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+}
+
+.rf-kpi-value {
+    font-family: var(--font-head);
+    font-size: 1.25rem;
+    font-weight: 800;
+}
+
+/* Tabela do relatório */
+.rf-table-wrap {
+    overflow-x: auto;
+}
+
+.rf-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.rf-table th {
+    padding: 9px 16px;
+    background: var(--bg-card2);
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.45px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+}
+
+.rf-table td {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border-soft);
+    color: var(--text);
+}
+
+.rf-table tr:last-child td {
+    border-bottom: none;
+}
+
+.rf-table tbody tr:hover td {
+    background: var(--bg-card2);
+}
+
+.rf-table tfoot td {
+    padding: 10px 16px;
+    border-top: 1px solid var(--border);
+    border-bottom: none;
+    background: var(--bg-card2);
+    font-weight: 700;
+}
+
+.rf-table-empty {
+    text-align: center;
+    color: var(--text-faint);
+    padding: 24px !important;
+}
+
+/* Info grid (fichas / cantina) */
+.rf-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0;
+    padding: 6px 0;
+}
+
+.rf-info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border-soft);
+    transition: background 0.18s;
+}
+
+.rf-info-item:hover {
+    background: var(--bg-card2);
+}
+
+.rf-info-label {
+    font-size: 0.73rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.45px;
+    color: var(--text-muted);
+}
+
+.rf-info-value {
+    font-family: var(--font-head);
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--text);
+}
+
+.rf-info-destaque {
+    background: var(--accent-glow);
+}
+
+.rf-info-destaque:hover {
+    background: rgba(26, 86, 219, 0.12) !important;
+}
+
+/* Status colorido */
+.rf-positivo .rf-info-value,
+.rf-positivo .rf-resultado-valor {
+    color: var(--green) !important;
+}
+
+.rf-negativo .rf-info-value,
+.rf-negativo .rf-resultado-valor {
+    color: var(--red) !important;
+}
+
+.rf-neutro .rf-info-value,
+.rf-neutro .rf-resultado-valor {
+    color: var(--text-muted) !important;
+}
+
+.rf-positivo.rf-info-item {
+    border-left: 3px solid var(--green);
+    background: var(--green-bg);
+}
+
+.rf-negativo.rf-info-item {
+    border-left: 3px solid var(--red);
+    background: var(--red-bg);
+}
+
+/* Resultado financeiro */
+.rf-secao-resultado {
+    border-color: rgba(26, 86, 219, 0.25);
+}
+
+.rf-resultado-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    padding: 16px;
+}
+
+.rf-resultado-card {
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: border-color 0.2s, transform 0.2s;
+}
+
+.rf-resultado-card:hover {
+    transform: translateY(-2px);
+}
+
+.rf-resultado-card.rf-positivo {
+    border-color: rgba(14, 159, 110, 0.35);
+    background: rgba(14, 159, 110, 0.04);
+}
+
+.rf-resultado-card.rf-negativo {
+    border-color: rgba(224, 36, 36, 0.3);
+    background: rgba(224, 36, 36, 0.03);
+}
+
+.rf-resultado-card.rf-neutro {
+    border-color: var(--border);
+    background: var(--bg-card2);
+}
+
+.rf-resultado-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+}
+
+.rf-positivo .rf-resultado-icon {
+    background: var(--green-bg);
+    color: var(--green);
+}
+
+.rf-negativo .rf-resultado-icon {
+    background: var(--red-bg);
+    color: var(--red);
+}
+
+.rf-neutro .rf-resultado-icon {
+    background: var(--bg-card2);
+    color: var(--text-muted);
+}
+
+.rf-resultado-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.rf-resultado-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+}
+
+.rf-resultado-valor {
+    font-family: var(--font-head);
+    font-size: 1.4rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.rf-resultado-calc {
+    font-size: 0.68rem;
+    color: var(--text-faint);
+    margin-top: 1px;
+}
+
+.rf-resultado-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    align-self: flex-start;
+}
+
+.rf-positivo .rf-resultado-status {
+    background: var(--green-bg);
+    color: var(--green);
+}
+
+.rf-negativo .rf-resultado-status {
+    background: var(--red-bg);
+    color: var(--red);
+}
+
+.rf-neutro .rf-resultado-status {
+    background: var(--bg-card2);
+    color: var(--text-muted);
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 640px) {
+    .rf-form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .rf-kpi-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .rf-kpi+.rf-kpi::before {
+        display: none;
+    }
+
+    .rf-kpi {
+        border-top: 1px solid var(--border-soft);
+    }
+
+    .rf-kpi:first-child {
+        border-top: none;
+    }
+
+    .rf-resultado-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .rf-calculado {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .rf-calculado-value {
+        width: 100%;
+    }
+
+    .rf-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
+@media (max-width: 480px) {
+    .rf-info-grid {
+        grid-template-columns: 1fr;
+    }
+}

@@ -1,0 +1,260 @@
+/* =====================================================
+   PDV Pro — MOBILE FIXES v1.0
+   1. Botões do relatório em grid 2 colunas
+   2. Status do caixa compacto na topbar
+   3. Modal de dados do evento com scroll adequado
+   ===================================================== */
+
+/* ── 1. STATUS DO CAIXA — compacto na topbar ──────── */
+
+/* Remove o countdown do topbar (vai pro sidebar) */
+#caixa-countdown {
+    display: none !important;
+}
+
+/* Status pill compacto */
+#caixa-status-bar {
+    padding: 4px 8px !important;
+    font-size: 0.72rem !important;
+    gap: 5px !important;
+    white-space: nowrap;
+}
+
+/* Esconde o horário "(até 00:00)" na topbar — aparece só no sidebar */
+#caixa-status-bar .caixa-horario-info {
+    display: none;
+}
+
+/* Em telas maiores, volta ao normal */
+@media (min-width: 901px) {
+    #caixa-status-bar {
+        padding: 5px 14px !important;
+        font-size: 0.78rem !important;
+        gap: 10px !important;
+    }
+
+    #caixa-status-bar .caixa-horario-info {
+        display: inline;
+    }
+
+    #caixa-countdown {
+        display: flex !important;
+    }
+}
+
+/* ── 2. BOTÕES DO RELATÓRIO — grid 2 colunas no mobile ── */
+
+@media (max-width: 900px) {
+
+    /* Container dos botões vira grid */
+    .filter-actions {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 8px !important;
+        width: 100%;
+        flex-wrap: unset !important;
+        flex-direction: unset !important;
+        align-items: unset !important;
+    }
+
+    /* Relatório Financeiro ocupa linha inteira (é o principal) */
+    #btn-rf-abrir {
+        grid-column: 1 / -1;
+        justify-content: center;
+    }
+
+    /* Gerar Relatório ocupa linha inteira */
+    #btn-gerar-relatorio {
+        grid-column: 1 / -1;
+        justify-content: center;
+    }
+
+    /* Divider do relatório financeiro some no mobile */
+    .rf-divider {
+        display: none !important;
+    }
+
+    /* Todos os botões centralizam conteúdo */
+    .filter-actions .btn-primary,
+    .filter-actions .btn-secondary {
+        justify-content: center;
+        padding: 9px 8px;
+        font-size: 0.8rem;
+        width: 100%;
+    }
+
+    /* Abertura/Fechamento e Histórico lado a lado */
+    #btn-abertura-fechamento,
+    #btn-historico {
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+
+    .filter-actions .btn-primary,
+    .filter-actions .btn-secondary {
+        font-size: 0.75rem;
+        padding: 8px 6px;
+    }
+
+    /* Esconde texto longo, mantém ícone */
+    #btn-exportar-csv span:not(i),
+    #btn-imprimir span:not(i) {
+        display: none;
+    }
+}
+
+/* ── 3. MODAL DADOS DO EVENTO — scroll mobile ──────── */
+
+/* O overlay do modal precisa ser rolável */
+#modal-rf {
+    align-items: flex-start !important;
+    padding: 0 !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* O modal ocupa quase toda a tela verticalmente no mobile */
+@media (max-width: 700px) {
+    #modal-rf {
+        padding: 0 !important;
+        align-items: flex-end !important;
+    }
+
+    #modal-rf .modal.rf-modal {
+        max-width: 100% !important;
+        width: 100% !important;
+        border-radius: 20px 20px 0 0 !important;
+        border-bottom: none !important;
+        max-height: 92vh !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+
+    /* Header fixo */
+    #modal-rf .modal-header {
+        flex-shrink: 0;
+    }
+
+    /* Body rola */
+    #modal-rf .rf-modal-body {
+        flex: 1 !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        max-height: unset !important;
+        padding: 14px 14px 8px !important;
+        gap: 12px !important;
+    }
+
+    /* Footer fixo embaixo */
+    #modal-rf .modal-footer {
+        flex-shrink: 0;
+        padding: 12px 14px;
+        background: var(--bg-card);
+        border-top: 1px solid var(--border);
+        /* Segurança para dispositivos com notch */
+        padding-bottom: max(12px, env(safe-area-inset-bottom));
+    }
+
+    /* Formulário em coluna única no mobile */
+    .rf-form-row {
+        grid-template-columns: 1fr !important;
+        gap: 10px !important;
+        padding: 10px 12px 0 !important;
+    }
+
+    .rf-form-row:last-of-type {
+        padding-bottom: 12px !important;
+    }
+
+    /* Campo calculado empilhado */
+    .rf-calculado {
+        flex-direction: column !important;
+        gap: 8px !important;
+        align-items: flex-start !important;
+    }
+
+    .rf-calculado-value {
+        width: 100% !important;
+    }
+
+    /* Esconde o hint do campo calculado (espaço curto) */
+    .rf-calculado-hint {
+        display: none;
+    }
+
+    /* Contador de fornecedores vai pro rodapé */
+    #modal-rf .modal-footer>span {
+        font-size: 0.68rem;
+    }
+
+    /* Botões do footer */
+    #modal-rf .modal-footer>div {
+        gap: 8px;
+    }
+
+    #btn-rf-confirmar {
+        flex: 1;
+        justify-content: center;
+    }
+}
+
+/* ── 4. MODAL HISTÓRICO — scroll mobile ────────────── */
+
+@media (max-width: 700px) {
+    #modal-historico {
+        align-items: flex-end !important;
+        padding: 0 !important;
+    }
+
+    #modal-historico .modal {
+        max-width: 100% !important;
+        width: 100% !important;
+        border-radius: 20px 20px 0 0 !important;
+        border-bottom: none !important;
+        max-height: 92vh !important;
+    }
+}
+
+/* ── 5. MODAL CAIXA — scroll mobile ───────────────── */
+
+@media (max-width: 700px) {
+    #modal-caixa {
+        align-items: flex-end !important;
+        padding: 0 !important;
+    }
+
+    #modal-caixa .modal {
+        max-width: 100% !important;
+        width: 100% !important;
+        border-radius: 20px 20px 0 0 !important;
+        border-bottom: none !important;
+    }
+
+    #modal-caixa .modal-footer {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    #modal-caixa .modal-footer>div {
+        width: 100%;
+        justify-content: flex-end;
+    }
+}
+
+/* ── 6. INDICADOR DE STATUS NO SIDEBAR (extra info) ── */
+
+/* Adiciona info do horário dentro do sidebar footer via pseudo */
+.sidebar-footer .caixa-status-info-sidebar {
+    font-size: 0.7rem;
+    color: var(--text-faint);
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.sidebar-footer .caixa-status-info-sidebar strong {
+    color: var(--text-muted);
+    font-size: 0.72rem;
+}
