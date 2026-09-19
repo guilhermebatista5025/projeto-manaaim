@@ -38,7 +38,7 @@ https://manaaim-pdv.vercel.app/
 - 🛒 Registro de vendas de produtos  
 - 📦 Controle simples de estoque  
 - 🏷️ Organização por categorias  
-- 💾 Salvamento automático no navegador (LocalStorage)  
+- 💾 Salvamento centralizado no Supabase
 - 📱 Instalação como aplicativo (PWA)  
 - ⚡ Funciona offline  
 - 🔎 Interface intuitiva e fácil de aprender  
@@ -58,11 +58,62 @@ O sistema pode ser instalado como um app no celular ou computador:
 - Experiência semelhante a um app nativo  
 - Funciona mesmo offline  
 
+## Configuração
+
+1. Execute o schema em `supabase/migrations/20260919000100_initial_pdv_schema.sql`.
+2. Copie `.env.example` para `.env` e preencha `SUPABASE_URL` e `SUPABASE_ANON_KEY`.
+3. Instale as dependências com `npm install`.
+4. Inicie frontend e backend com `npm run dev`.
+5. Acesse `http://localhost:5173`.
+
+### Acessos master
+
+O sistema aceita somente os dois masters configurados no `.env`:
+
+```env
+MASTER_THIAGO_EMAIL=thiago@exemplo.com
+MASTER_THIAGO_PASSWORD=troque-por-uma-senha-forte
+MASTER_CRISTIANO_EMAIL=cristiano@exemplo.com
+MASTER_CRISTIANO_PASSWORD=troque-por-outra-senha-forte
+```
+
+Os e-mails e as senhas devem ser iguais aos dois usuários cadastrados no Supabase Auth. Para trocar um acesso, atualize o usuário no Supabase Auth e os valores correspondentes no `.env`, depois reinicie o servidor. O frontend nunca recebe essas senhas e o cadastro público permanece desativado.
+
+Para produção, execute `npm run build` e depois `npm start`, configurando `NODE_ENV=production`.
+
+As variáveis do Supabase são lidas somente pelo backend. O frontend usa `/api`, e a sessão fica em cookies `HttpOnly`.
+
 ## 🧠 Como funciona o salvamento
 
-Todos os dados são armazenados localmente usando:
+Os dados são enviados ao backend autenticado e persistidos no Supabase. O navegador não usa `localStorage` como banco de dados.
 
-`LocalStorage`
+## Estrutura do projeto
+
+```text
+projeto-manaaim/
+|-- index.html
+|-- css/
+|   |-- style.css
+|   |-- caixa.css
+|   |-- melhorias.css
+|   |-- mobile-fixes.css
+|   `-- relatorio-financeiro.css
+|-- js/
+|   |-- script.js
+|   |-- caixa.js
+|   |-- mobile-fixes.js
+|   `-- relatorio-financeiro.js
+|-- backend/
+|   `-- server.js
+|-- assets/
+|   |-- icon-512.png
+|   `-- pdv-img.png
+|-- manifest.json
+|-- sw.js
+`-- supabase/
+```
+
+O `sw.js` permanece na raiz para que o modo offline do PWA controle todo o aplicativo.
 
 ## ⚙️ Como usar
 

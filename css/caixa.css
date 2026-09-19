@@ -15,6 +15,12 @@
     transition: all 0.3s ease;
     cursor: default;
     white-space: nowrap;
+    min-width: 0;
+}
+
+.caixa-status-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .caixa-status-bar.aberto {
@@ -73,6 +79,8 @@
     font-size: 0.72rem;
     opacity: 0.8;
     font-weight: 400;
+    padding-left: 9px;
+    border-left: 1px solid currentColor;
 }
 
 /* ---------- BOTÕES NO RELATÓRIO ---------- */

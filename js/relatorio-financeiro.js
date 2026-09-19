@@ -3,8 +3,8 @@
  * Modal em 2 etapas · Cálculos · Render · Export PDF
  *
  * Como usar:
- *   1. <link rel="stylesheet" href="relatorio-financeiro.css"> no <head>
- *   2. <script src="relatorio-financeiro.js"></script> após script.js e caixa.js
+ *   1. <link rel="stylesheet" href="css/relatorio-financeiro.css"> no <head>
+ *   2. <script src="js/relatorio-financeiro.js"></script> após js/script.js e js/caixa.js
  *
  * Dependências: DB, UI (de script.js)
  */
@@ -215,7 +215,7 @@ const ModRelatorioFinanceiro = (() => {
   /* ─────────────────────────────────────────────────
      CONFIRMAR (ETAPA 2) → GERAR RELATÓRIO
   ───────────────────────────────────────────────── */
-  const _confirmar = () => {
+  const _confirmar = async () => {
     if (!_validarEtapa2()) return;
 
     _estado = {
@@ -227,9 +227,14 @@ const ModRelatorioFinanceiro = (() => {
       caixaFinal:         parseFloat(document.getElementById('rf-caixa-final').value),
     };
 
-    UI.closeModal('modal-rf');
-    _renderRelatorio();
-    UI.toast('Relatório gerado com sucesso!', 'success');
+    try {
+      await DB.saveFinancialReport(_estado);
+      UI.closeModal('modal-rf');
+      _renderRelatorio();
+      UI.toast('Relatório salvo no Supabase!', 'success');
+    } catch (error) {
+      UI.toast(error.message, 'error');
+    }
   };
 
   /* ─────────────────────────────────────────────────

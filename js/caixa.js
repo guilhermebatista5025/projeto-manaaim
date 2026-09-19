@@ -3,8 +3,8 @@
  * Controle de Abertura/Fechamento e Histórico de Relatórios
  *
  * Como usar:
- *   1. Adicione <link rel="stylesheet" href="caixa.css"> no <head>
- *   2. Adicione <script src="caixa.js"></script> APÓS script.js no <body>
+ *   1. Adicione <link rel="stylesheet" href="css/caixa.css"> no <head>
+ *   2. Adicione <script src="js/caixa.js"></script> APÓS js/script.js no <body>
  *
  * Dependências: DB, Utils, UI (do script.js)
  */
@@ -17,12 +17,6 @@
 const ModCaixa = (() => {
 
     /* ---------- CONSTANTES ---------- */
-    const KEYS = {
-        config: 'pdvpro_caixa_config',
-        historico: 'pdvpro_historico',
-        lastCheck: 'pdvpro_last_encerramento',
-    };
-
     const DEFAULT_CONFIG = {
         usarPadrao: true,
         abertura: '07:30',
@@ -37,23 +31,11 @@ const ModCaixa = (() => {
     let _encerradoHoje = false;
 
     /* ---------- PERSISTÊNCIA ---------- */
-    const getConfig = () => {
-        try {
-            return { ...DEFAULT_CONFIG, ...JSON.parse(localStorage.getItem(KEYS.config) || '{}') };
-        } catch { return { ...DEFAULT_CONFIG }; }
-    };
-
-    const saveConfig = cfg => localStorage.setItem(KEYS.config, JSON.stringify(cfg));
-
-    const getHistorico = () => {
-        try { return JSON.parse(localStorage.getItem(KEYS.historico) || '[]'); }
-        catch { return []; }
-    };
-
-    const saveHistorico = list => localStorage.setItem(KEYS.historico, JSON.stringify(list));
-
-    const getLastCheck = () => localStorage.getItem(KEYS.lastCheck) || '';
-    const setLastCheck = d => localStorage.setItem(KEYS.lastCheck, d);
+    const getConfig = () => ({ ...DEFAULT_CONFIG, ...DB.getConfig() });
+    const saveConfig = cfg => DB.saveConfig(cfg);
+    const getHistorico = () => DB.getHistorico();
+    const saveHistorico = list => DB.saveHistorico(list);
+    const getLastCheck = () => DB.getLastCheck();
 
     /* ---------- UTILITÁRIOS ---------- */
     const now = () => new Date();
@@ -166,12 +148,11 @@ const ModCaixa = (() => {
     };
 
     /* ---------- ENCERRAR CAIXA ---------- */
-    const encerrarCaixa = (manual = false) => {
+    const encerrarCaixa = async (manual = false) => {
         const snapshot = _tirarSnapshot();
 
         if (snapshot.numVendas === 0 && !manual) {
             // Não salva snapshot vazio no encerramento automático
-            setLastCheck(hojeStr());
             _encerradoHoje = true;
             _atualizarStatus();
             return;
@@ -179,9 +160,13 @@ const ModCaixa = (() => {
 
         const historico = getHistorico();
         historico.unshift(snapshot); // mais recente primeiro
-        saveHistorico(historico);
-
-        setLastCheck(hojeStr());
+        try {
+            await DB.closeCashSession();
+            await saveHistorico(historico);
+        } catch (error) {
+            if (typeof UI !== 'undefined') UI.toast(error.message, 'error');
+            return null;
+        }
         _encerradoHoje = true;
 
         _atualizarStatus();
@@ -283,9 +268,9 @@ const ModCaixa = (() => {
         statusEl.className = `caixa-status-bar ${status}`;
 
         const labels = {
-            aberto: `<span class="caixa-status-dot"></span> Caixa Aberto <span class="caixa-horario-info">(até ${cfg.fechamento})</span>`,
-            fechado: `<span class="caixa-status-dot"></span> Caixa Encerrado`,
-            aguardando: `<span class="caixa-status-dot"></span> Aguardando Abertura <span class="caixa-horario-info">(${cfg.abertura})</span>`,
+            aberto: `<span class="caixa-status-dot"></span><span class="caixa-status-label">Caixa Aberto</span><span class="caixa-horario-info">até ${cfg.fechamento}</span>`,
+            fechado: `<span class="caixa-status-dot"></span><span class="caixa-status-label">Caixa Encerrado</span>`,
+            aguardando: `<span class="caixa-status-dot"></span><span class="caixa-status-label">Aguardando</span><span class="caixa-horario-info">abre ${cfg.abertura}</span>`,
         };
 
         statusEl.innerHTML = labels[status] || labels.aguardando;
@@ -352,14 +337,12 @@ const ModCaixa = (() => {
         const topbarActions = document.querySelector('.topbar-actions');
         if (topbarActions) {
             const statusWrap = document.createElement('div');
-            statusWrap.style.display = 'flex';
-            statusWrap.style.alignItems = 'center';
-            statusWrap.style.gap = '8px';
+            statusWrap.className = 'topbar-caixa-group';
             statusWrap.innerHTML = `
         <div id="caixa-countdown" class="caixa-countdown"></div>
         <div id="caixa-status-bar" class="caixa-status-bar aguardando">
           <span class="caixa-status-dot"></span>
-          Carregando...
+          <span class="caixa-status-label">Carregando...</span>
         </div>
       `;
             topbarActions.prepend(statusWrap);
@@ -534,7 +517,7 @@ const ModCaixa = (() => {
     };
 
     /* ---------- SALVAR CONFIG ---------- */
-    const _salvarConfig = () => {
+    const _salvarConfig = async () => {
         const cbPadrao = document.getElementById('caixa-usar-padrao');
         const inputAb = document.getElementById('caixa-abertura');
         const inputFech = document.getElementById('caixa-fechamento');
@@ -543,13 +526,8 @@ const ModCaixa = (() => {
         const abertura = usarPadrao ? '07:30' : (inputAb?.value || '07:30');
         const fechamento = usarPadrao ? '00:00' : (inputFech?.value || '00:00');
 
-        saveConfig({ usarPadrao, abertura, fechamento });
-
-        // Resetar flag se hoje ainda não encerrou
-        if (getLastCheck() === hojeStr()) {
-            localStorage.removeItem(KEYS.lastCheck);
-            _encerradoHoje = false;
-        }
+        try { await saveConfig({ usarPadrao, abertura, fechamento }); }
+        catch (error) { if (typeof UI !== 'undefined') UI.toast(error.message, 'error'); return; }
 
         _atualizarStatus();
 
@@ -740,10 +718,11 @@ const ModCaixa = (() => {
     };
 
     /* ---------- EXCLUIR ITEM DO HISTÓRICO ---------- */
-    const excluirItem = (id) => {
+    const excluirItem = async (id) => {
         if (!confirm('Excluir este relatório do histórico?')) return;
         const list = getHistorico().filter(h => h.id !== id);
-        saveHistorico(list);
+        try { await saveHistorico(list); }
+        catch (error) { if (typeof UI !== 'undefined') UI.toast(error.message, 'error'); return; }
         _renderHistorico(document.getElementById('historico-search-input')?.value || '');
         _atualizarBadgeHistorico();
         if (typeof UI !== 'undefined') UI.toast('Relatório excluído.', 'info');
@@ -788,9 +767,10 @@ const ModCaixa = (() => {
     };
 
     /* ---------- LIMPAR HISTÓRICO ---------- */
-    const _limparHistorico = () => {
+    const _limparHistorico = async () => {
         if (!confirm('Apagar TODO o histórico de relatórios? Esta ação não pode ser desfeita.')) return;
-        saveHistorico([]);
+        try { await saveHistorico([]); }
+        catch (error) { if (typeof UI !== 'undefined') UI.toast(error.message, 'error'); return; }
         _renderHistorico();
         _atualizarBadgeHistorico();
         if (typeof UI !== 'undefined') UI.toast('Histórico apagado.', 'info');

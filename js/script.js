@@ -21,125 +21,125 @@ const CATEGORIA_CONFIG = {
 
 
 /* =====================================================
-  MÓDULO: DB — Camada de persistência (localStorage)
+  MÓDULO: DB — Supabase como persistência exclusiva
   ===================================================== */
 const DB = (() => {
-  const KEYS = {
-    vendedores:  'pdvpro_vendedores',
-    produtos:    'pdvpro_produtos',
-    vendas:      'pdvpro_vendas',
-    estoque_ini: 'pdvpro_estoque_ini',
+  const { api, user } = window.PDVRuntime;
+  const state = {
+    vendedores: [], produtos: [], vendas: [], categorias: [],
+    config: { usarPadrao: true, abertura: '07:30', fechamento: '00:00' },
+    historico: [], cashSessions: [],
   };
 
-  const get  = key => JSON.parse(localStorage.getItem(key) || '[]');
-  const save = (key, data) => localStorage.setItem(key, JSON.stringify(data));
-  const genId = () => '_' + Math.random().toString(36).slice(2, 11) + Date.now().toString(36);
+  const categoriaByName = nome => state.categorias.find(c => c.nome === (nome || 'Outros'));
 
-  // --- Vendedores ---
-  const getVendedores    = ()      => get(KEYS.vendedores);
-  const saveVendedores   = list   => save(KEYS.vendedores, list);
-  const getVendedorById  = id     => getVendedores().find(v => v.id === id);
-
-  const addVendedor = nome => {
-    const list = getVendedores();
-    const v = { id: genId(), nome: nome.trim() };
-    list.push(v);
-    saveVendedores(list);
-    return v;
-  };
-  const updateVendedor = (id, nome) => {
-    saveVendedores(getVendedores().map(v => v.id === id ? { ...v, nome: nome.trim() } : v));
-  };
-  const deleteVendedor = id => {
-    saveVendedores(getVendedores().filter(v => v.id !== id));
-    saveProdutos(getProdutos().filter(p => p.vendedorId !== id));
-  };
-
-  // --- Produtos ---
-  const getProdutos              = ()    => get(KEYS.produtos);
-  const saveProdutos             = list => save(KEYS.produtos, list);
-  const getProdutosByVendedor    = vid  => getProdutos().filter(p => p.vendedorId === vid);
-  const getProdutoById           = id   => getProdutos().find(p => p.id === id);
-
-  // Produtos com estoque > 0
-  const getProdutosDisponiveisByVendedor = vid =>
-    getProdutosByVendedor(vid).filter(p => p.qtd > 0);
-
-  // Produtos com estoque = 0
-  const getProdutosEsgotados             = ()    => getProdutos().filter(p => p.qtd === 0);
-  const getProdutosEsgotadosByVendedor   = vid  => getProdutosByVendedor(vid).filter(p => p.qtd === 0);
-
-  // Categorias em uso por vendedor
-  const getCategoriasByVendedor = vid => {
-    const prods = getProdutosDisponiveisByVendedor(vid);
-    return [...new Set(prods.map(p => p.categoria || 'Outros'))].sort();
-  };
-
-  const addProduto = (vendedorId, nome, preco, qtd, categoria) => {
-    const list = getProdutos();
-    const p = {
-      id: genId(),
-      vendedorId,
-      nome: nome.trim(),
-      preco: +preco,
-      qtd: +qtd,
-      qtdInicial: +qtd,
-      categoria: categoria || 'Outros',
+  const init = async () => {
+    const data = await api('/data');
+    state.vendedores = data.vendedores.map(v => ({ id: v.id, nome: v.nome }));
+    state.categorias = data.categorias;
+    state.produtos = data.produtos.map(p => ({
+      id: p.id, vendedorId: p.vendedor_id, categoryId: p.category_id,
+      nome: p.nome, preco: Number(p.preco), qtd: p.estoque_atual,
+      qtdInicial: p.estoque_inicial,
+      categoria: data.categorias.find(c => c.id === p.category_id)?.nome || 'Outros',
+    }));
+    state.vendas = data.vendas.map(v => ({
+      id: v.id, vendedorId: v.vendedor_id, total: Number(v.total),
+      recebido: Number(v.received_amount), troco: Number(v.change_amount), data: v.sold_at,
+      cashSessionId: v.cash_session_id,
+      itens: (v.sale_items || []).map(i => ({
+        produtoId: i.product_id, nome: i.product_name, qtd: i.quantity,
+        preco: Number(i.unit_price), subtotal: Number(i.subtotal),
+      })),
+    }));
+    state.config = {
+      usarPadrao: data.config.usar_horario_padrao,
+      abertura: String(data.config.abertura).slice(0, 5),
+      fechamento: String(data.config.fechamento).slice(0, 5),
     };
-    list.push(p);
-    saveProdutos(list);
-    _snapshotEstoque(p.id, +qtd);
-    return p;
+    state.historico = data.relatorios
+      .filter(r => r.report_snapshot && Object.keys(r.report_snapshot).length)
+      .map(r => ({ ...r.report_snapshot, id: r.id }));
+    state.cashSessions = data.caixas;
   };
 
-  const updateProduto = (id, nome, preco, qtd, categoria) => {
-    const list = getProdutos().map(p => {
-      if (p.id !== id) return p;
-      const novaQtd = +qtd;
-      if (novaQtd > p.qtd) _snapshotEstoque(id, novaQtd);
-      return { ...p, nome: nome.trim(), preco: +preco, qtd: novaQtd, categoria: categoria || p.categoria || 'Outros' };
-    });
-    saveProdutos(list);
+  const getVendedores = () => state.vendedores;
+  const getVendedorById = id => state.vendedores.find(v => v.id === id);
+  const addVendedor = async nome => {
+    const data = await api('/vendedores', { method: 'POST', body: JSON.stringify({ nome }) });
+    const value = { id: data.id, nome: data.nome }; state.vendedores.push(value); return value;
+  };
+  const updateVendedor = async (id, nome) => {
+    await api(`/vendedores/${id}`, { method: 'PATCH', body: JSON.stringify({ nome }) });
+    const item = getVendedorById(id); if (item) item.nome = nome.trim();
+  };
+  const deleteVendedor = async id => {
+    await api(`/vendedores/${id}`, { method: 'DELETE' });
+    state.vendedores = state.vendedores.filter(v => v.id !== id); state.produtos = state.produtos.filter(p => p.vendedorId !== id);
   };
 
-  const deleteProduto = id => saveProdutos(getProdutos().filter(p => p.id !== id));
+  const getProdutos = () => state.produtos;
+  const getProdutosByVendedor = vid => state.produtos.filter(p => p.vendedorId === vid);
+  const getProdutoById = id => state.produtos.find(p => p.id === id);
+  const getProdutosDisponiveisByVendedor = vid => getProdutosByVendedor(vid).filter(p => p.qtd > 0);
+  const getProdutosEsgotados = () => state.produtos.filter(p => p.qtd === 0);
+  const getProdutosEsgotadosByVendedor = vid => getProdutosByVendedor(vid).filter(p => p.qtd === 0);
+  const getCategoriasByVendedor = vid => [...new Set(getProdutosDisponiveisByVendedor(vid).map(p => p.categoria || 'Outros'))].sort();
+  const getEstoqueInicial = () => Object.fromEntries(state.produtos.map(p => [p.id, p.qtdInicial]));
 
-  const decrementarEstoque = (id, qtdVendida) => {
-    const list = getProdutos().map(p =>
-      p.id === id ? { ...p, qtd: Math.max(0, p.qtd - qtdVendida) } : p
-    );
-    saveProdutos(list);
+  const addProduto = async (vendedorId, nome, preco, qtd, categoria) => {
+    const category = categoriaByName(categoria);
+    if (!category) throw new Error(`Categoria não encontrada: ${categoria}`);
+    const data = await api('/produtos', { method: 'POST', body: JSON.stringify({ vendedorId, nome, preco, qtd, categoria }) });
+    const value = { id: data.id, vendedorId, categoryId: category.id, nome: data.nome, preco: Number(data.preco), qtd: data.estoque_atual, qtdInicial: data.estoque_inicial, categoria: category.nome };
+    state.produtos.push(value); return value;
+  };
+  const updateProduto = async (id, nome, preco, qtd, categoria) => {
+    const current = getProdutoById(id); if (!current) throw new Error('Produto não encontrado.');
+    const category = categoriaByName(categoria); if (!category) throw new Error('Categoria não encontrada.');
+    await api(`/produtos/${id}`, { method: 'PATCH', body: JSON.stringify({ nome, preco, qtd, categoria }) });
+    Object.assign(current, { nome: nome.trim(), preco: Number(preco), qtd: Number(qtd), categoria: category.nome, categoryId: category.id });
+  };
+  const deleteProduto = async id => {
+    await api(`/produtos/${id}`, { method: 'DELETE' }); state.produtos = state.produtos.filter(p => p.id !== id);
   };
 
-  // --- Estoque Inicial ---
-  const _snapshotEstoque = (produtoId, qtd) => {
-    const map = JSON.parse(localStorage.getItem(KEYS.estoque_ini) || '{}');
-    map[produtoId] = qtd;
-    localStorage.setItem(KEYS.estoque_ini, JSON.stringify(map));
+  const getVendas = () => state.vendas;
+  const getVendasByVendedor = vid => state.vendas.filter(v => v.vendedorId === vid);
+  const addVenda = async (vendedorId, itens, total, recebido) => {
+    await api('/vendas', { method: 'POST', body: JSON.stringify({ vendedorId, itens, total, recebido }) });
+    await init();
   };
-  const getEstoqueInicial = () => JSON.parse(localStorage.getItem(KEYS.estoque_ini) || '{}');
 
-  // --- Vendas ---
-  const getVendas           = ()    => get(KEYS.vendas);
-  const getVendasByVendedor = vid  => getVendas().filter(v => v.vendedorId === vid);
-
-  const addVenda = (vendedorId, itens, total, recebido, troco) => {
-    const list = getVendas();
-    const v = { id: genId(), vendedorId, itens, total, recebido, troco, data: new Date().toISOString() };
-    list.push(v);
-    save(KEYS.vendas, list);
-    return v;
+  const getConfig = () => ({ ...state.config });
+  const saveConfig = async config => {
+    await api('/config', { method: 'PATCH', body: JSON.stringify(config) }); state.config = { ...config };
   };
+  const getHistorico = () => state.historico;
+  const saveHistorico = async list => {
+    const existingIds = new Set(state.historico.map(h => h.id));
+    const nextIds = new Set(list.map(h => h.id).filter(id => existingIds.has(id)));
+    const removed = [...existingIds].filter(id => !nextIds.has(id));
+    for (const id of removed) await api(`/relatorios/${id}`, { method: 'DELETE' });
+    for (const item of list.filter(h => !existingIds.has(h.id))) {
+      const data = await api('/relatorios', { method: 'POST', body: JSON.stringify(item) }); item.id = data.id;
+    }
+    state.historico = list;
+  };
+  const getLastCheck = () => state.cashSessions.find(s => s.status === 'fechado')?.closed_at?.slice(0, 10) || '';
+  const closeCashSession = async () => {
+    const data = await api('/caixa/fechar', { method: 'POST', body: JSON.stringify({ closingAmount: 0 }) });
+    await init(); return data;
+  };
+  const saveFinancialReport = data => api('/relatorios-financeiros', { method: 'POST', body: JSON.stringify(data) });
 
   return {
-    getVendedores, addVendedor, updateVendedor, deleteVendedor, getVendedorById,
-    getProdutos, getProdutosByVendedor, getProdutoById,
-    getProdutosDisponiveisByVendedor,
-    getProdutosEsgotados, getProdutosEsgotadosByVendedor,
-    getCategoriasByVendedor,
-    addProduto, updateProduto, deleteProduto, decrementarEstoque,
-    getEstoqueInicial,
+    init, getVendedores, addVendedor, updateVendedor, deleteVendedor, getVendedorById,
+    getProdutos, getProdutosByVendedor, getProdutoById, getProdutosDisponiveisByVendedor,
+    getProdutosEsgotados, getProdutosEsgotadosByVendedor, getCategoriasByVendedor,
+    addProduto, updateProduto, deleteProduto, getEstoqueInicial,
     getVendas, addVenda, getVendasByVendedor,
+    getConfig, saveConfig, getHistorico, saveHistorico, getLastCheck, closeCashSession, saveFinancialReport,
   };
 })();
 
@@ -289,30 +289,23 @@ const ModVendedores = (() => {
     UI.openModal('modal-vendedor');
   };
 
-  const save = () => {
+  const save = async () => {
     const nome = $('#vendedor-nome-input').value.trim();
     if (!nome) { UI.toast('Informe o nome do vendedor.', 'error'); return; }
     const id = $('#vendedor-id-edit').value;
-    if (id) {
-      DB.updateVendedor(id, nome);
-      UI.toast('Vendedor atualizado!', 'success');
-    } else {
-      DB.addVendedor(nome);
-      UI.toast('Vendedor cadastrado!', 'success');
-    }
-    UI.closeModal('modal-vendedor');
-    render();
-    _refreshSelects();
+    try {
+      if (id) { await DB.updateVendedor(id, nome); UI.toast('Vendedor atualizado!', 'success'); }
+      else { await DB.addVendedor(nome); UI.toast('Vendedor cadastrado!', 'success'); }
+      UI.closeModal('modal-vendedor'); render(); _refreshSelects();
+    } catch (error) { UI.toast(error.message, 'error'); }
   };
 
   const del = id => {
     const v = DB.getVendedorById(id);
     if (!v) return;
-    UI.confirm(`Excluir "${v.nome}"? Todos os produtos vinculados também serão removidos.`, 'Excluir Vendedor', () => {
-      DB.deleteVendedor(id);
-      UI.toast('Vendedor excluído.', 'info');
-      render();
-      _refreshSelects();
+    UI.confirm(`Desativar "${v.nome}" e seus produtos?`, 'Desativar Vendedor', async () => {
+      try { await DB.deleteVendedor(id); UI.toast('Vendedor desativado.', 'info'); render(); _refreshSelects(); }
+      catch (error) { UI.toast(error.message, 'error'); }
     });
   };
 
@@ -468,7 +461,7 @@ const ModEstoque = (() => {
   };
 
   /* ── Salvar ── */
-  const save = () => {
+  const save = async () => {
     const nome      = $('#produto-nome-input').value.trim();
     const preco     = parseFloat($('#produto-preco-input').value);
     const qtd       = parseInt($('#produto-qtd-input').value);
@@ -480,29 +473,20 @@ const ModEstoque = (() => {
     if (isNaN(qtd)   || qtd < 0)  { UI.toast('Quantidade inválida.', 'error'); return; }
 
     const id = $('#produto-id-edit').value;
-    if (id) {
-      DB.updateProduto(id, nome, preco, qtd, categoria);
-      UI.toast('Produto atualizado!', 'success');
-    } else {
-      DB.addProduto(_vendedorAtivo, nome, preco, qtd, categoria);
-      UI.toast('Produto adicionado!', 'success');
-    }
-    UI.closeModal('modal-produto');
-    renderTabela();
-    ModPDV.renderProdutos();
-    ModVendedores.render();
+    try {
+      if (id) { await DB.updateProduto(id, nome, preco, qtd, categoria); UI.toast('Produto atualizado!', 'success'); }
+      else { await DB.addProduto(_vendedorAtivo, nome, preco, qtd, categoria); UI.toast('Produto adicionado!', 'success'); }
+      UI.closeModal('modal-produto'); renderTabela(); ModPDV.renderProdutos(); ModVendedores.render();
+    } catch (error) { UI.toast(error.message, 'error'); }
   };
 
   /* ── Excluir ── */
   const del = id => {
     const p = DB.getProdutoById(id);
     if (!p) return;
-    UI.confirm(`Excluir o produto "${p.nome}"?`, 'Excluir Produto', () => {
-      DB.deleteProduto(id);
-      UI.toast('Produto removido.', 'info');
-      renderTabela();
-      ModPDV.renderProdutos();
-      ModVendedores.render();
+    UI.confirm(`Desativar o produto "${p.nome}"?`, 'Desativar Produto', async () => {
+      try { await DB.deleteProduto(id); UI.toast('Produto desativado.', 'info'); renderTabela(); ModPDV.renderProdutos(); ModVendedores.render(); }
+      catch (error) { UI.toast(error.message, 'error'); }
     });
   };
 
@@ -837,7 +821,7 @@ const ModPDV = (() => {
     }
   };
 
-  const finalizarVenda = () => {
+  const finalizarVenda = async () => {
     if (!_vendedorId)      { UI.toast('Selecione um vendedor.', 'error'); return; }
     if (!_carrinho.length) { UI.toast('Carrinho vazio!', 'error'); return; }
 
@@ -846,15 +830,11 @@ const ModPDV = (() => {
     if (recebido < total) { UI.toast('Valor recebido é menor que o total!', 'error'); return; }
 
     const troco = recebido - total;
-    _carrinho.forEach(item => DB.decrementarEstoque(item.produtoId, item.qtd));
-    DB.addVenda(_vendedorId, [..._carrinho], total, recebido, troco);
-
-    UI.toast(`Venda finalizada! Troco: ${fmtMoeda(troco)}`, 'success');
-    _carrinho = [];
-    $('#pdv-recebido').value = '';
-    renderCarrinho();
-    renderProdutos();   // re-render com produtos atualizados (zera os esgotados)
-    ModVendedores.render();
+    try {
+      await DB.addVenda(_vendedorId, [..._carrinho], total, recebido);
+      UI.toast(`Venda finalizada! Troco: ${fmtMoeda(troco)}`, 'success');
+      _carrinho = []; $('#pdv-recebido').value = ''; renderCarrinho(); renderProdutos(); ModVendedores.render();
+    } catch (error) { UI.toast(error.message, 'error'); }
   };
 
   /* ── Eventos ── */
@@ -1045,7 +1025,7 @@ const ModPWA = (() => {
   const init = () => {
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
+        navigator.serviceWorker.register(window.PDVRuntime.serviceWorkerUrl)
           .then(reg => console.log('[PWA] SW registrado:', reg.scope))
           .catch(err => console.warn('[PWA] Falha SW:', err));
       });
@@ -1125,41 +1105,8 @@ const App = (() => {
     overlay?.addEventListener('click', () => { sidebar.classList.remove('open'); overlay.classList.remove('open'); });
   };
 
-  const _loadInitialData = () => {
-    if (DB.getVendedores().length === 0) _seedDemoData();
-    else _migrateCategorias(); // migra produtos antigos sem categoria
-  };
-
-  // Migra produtos antigos (sem categoria) para 'Outros'
-  const _migrateCategorias = () => {
-    const produtos = DB.getProdutos();
-    const semCategoria = produtos.filter(p => !p.categoria);
-    if (!semCategoria.length) return;
-    const updated = produtos.map(p => ({ ...p, categoria: p.categoria || 'Outros' }));
-    localStorage.setItem('pdvpro_produtos', JSON.stringify(updated));
-  };
-
-  const _seedDemoData = () => {
-    const v1 = DB.addVendedor('Maria Silva');
-    const v2 = DB.addVendedor('João Pereira');
-
-    DB.addProduto(v1.id, 'Refrigerante 350ml', 5.00, 24, 'Bebidas');
-    DB.addProduto(v1.id, 'Suco de Laranja',    4.50, 20, 'Bebidas');
-    DB.addProduto(v1.id, 'Água Mineral 500ml', 2.50, 30, 'Bebidas');
-    DB.addProduto(v1.id, 'Cerveja Lata',       7.00, 40, 'Bebidas');
-    DB.addProduto(v1.id, 'Sorvete Palito',     4.00,  0, 'Gelados'); // demo esgotado
-
-    DB.addProduto(v2.id, 'Coxinha',    6.00, 50, 'Salgados');
-    DB.addProduto(v2.id, 'Pastel',     5.50, 40, 'Salgados');
-    DB.addProduto(v2.id, 'Espetinho',  8.00, 30, 'Salgados');
-    DB.addProduto(v2.id, 'Churros',    4.00, 25, 'Doces');
-    DB.addProduto(v2.id, 'Bolo Fatia', 7.50, 15, 'Bolos');
-
-    UI.toast('Dados de demonstração carregados!', 'info');
-  };
-
-  const init = () => {
-    _loadInitialData();
+  const init = async () => {
+    await DB.init();
     _initNav();
     _initHamburger();
     UI.startClock();
@@ -1175,4 +1122,9 @@ const App = (() => {
   return { init };
 })();
 
-document.addEventListener('DOMContentLoaded', () => App.init());
+const startApp = () => App.init().catch(error => {
+  console.error(error);
+  document.body.innerHTML = `<main style="padding:40px;font-family:sans-serif"><h1>Erro ao carregar dados</h1><p>${Utils.sanitize(error.message)}</p></main>`;
+});
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startApp);
+else startApp();

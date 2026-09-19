@@ -25,8 +25,8 @@
     display: none;
 }
 
-/* Em telas maiores, volta ao normal */
-@media (min-width: 901px) {
+/* Em telas largas, volta ao formato completo */
+@media (min-width: 1181px) {
     #caixa-status-bar {
         padding: 5px 14px !important;
         font-size: 0.78rem !important;
@@ -257,4 +257,10 @@
 .sidebar-footer .caixa-status-info-sidebar strong {
     color: var(--text-muted);
     font-size: 0.72rem;
+}
+
+@media (max-width: 560px) {
+    #caixa-status-bar {
+        max-width: 112px;
+    }
 }
