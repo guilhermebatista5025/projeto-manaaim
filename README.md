@@ -61,7 +61,7 @@ O sistema pode ser instalado como um app no celular ou computador:
 ## Configuração
 
 1. Execute o schema em `supabase/migrations/20260919000100_initial_pdv_schema.sql`.
-2. Copie `.env.example` para `.env` e preencha `SUPABASE_URL` e `SUPABASE_ANON_KEY`.
+2. Crie o arquivo `.env` localmente e preencha `SUPABASE_URL`, `SUPABASE_ANON_KEY` e as quatro variáveis `MASTER_*`.
 3. Instale as dependências com `npm install`.
 4. Inicie frontend e backend com `npm run dev`.
 5. Acesse `http://localhost:5173`.
