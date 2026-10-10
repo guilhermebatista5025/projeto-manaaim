@@ -44,7 +44,7 @@ const waitForAuthentication = async () => {
         <span class="auth-badge"><i class="fa-solid fa-shield-halved"></i> Acesso restrito</span>
       </div>
       <h1 id="auth-title">Bem-vindo ao PDV Manaaim</h1>
-      <p id="auth-description">Entre com seu acesso master para gerenciar vendas, estoque e relatórios.</p>
+      <p id="auth-description">Entre com seu e-mail e senha. O sistema identifica automaticamente o seu nível de acesso.</p>
       <form id="auth-form" novalidate>
         <label for="auth-email">E-mail
           <span class="auth-input"><i class="fa-regular fa-envelope" aria-hidden="true"></i><input id="auth-email" type="email" autocomplete="username" placeholder="seu@email.com" required></span>
@@ -96,8 +96,8 @@ const installSessionControls = session => {
   const button = document.createElement('button');
   button.id = 'auth-logout';
   button.type = 'button';
-  button.title = `Sair do acesso de ${session.master.name}`;
-  button.innerHTML = `<span class="auth-user-avatar">${session.master.name.charAt(0)}</span><span class="auth-user-name">${session.master.name}</span><i class="fa-solid fa-arrow-right-from-bracket"></i>`;
+  button.title = `Sair do acesso de ${session.access.name}`;
+  button.innerHTML = `<span class="auth-user-avatar">${session.access.name.charAt(0)}</span><span class="auth-user-name">${session.access.name}</span><i class="fa-solid fa-arrow-right-from-bracket"></i>`;
   button.addEventListener('click', async () => {
     button.disabled = true;
     try { await api('/auth/logout', { method: 'POST' }); } finally { window.location.reload(); }
@@ -113,12 +113,16 @@ const loadClassicScript = src => new Promise((resolve, reject) => {
 
 try {
   const session = await waitForAuthentication();
-  window.PDVRuntime = { api, user: session.user, master: session.master, organizationId: session.organization_id, role: 'master', serviceWorkerUrl: '/sw.js' };
-  installSessionControls(session);
-  await loadClassicScript(mainScriptUrl);
-  await loadClassicScript(financialReportUrl);
-  await loadClassicScript(cashRegisterUrl);
-  await loadClassicScript(mobileFixesUrl);
+  if (session.access?.type === 'form') {
+    window.location.replace('/cantina-formulario-icm-main/');
+  } else {
+    window.PDVRuntime = { api, user: session.user, master: session.access, organizationId: session.organization_id, role: 'master', serviceWorkerUrl: '/sw.js' };
+    installSessionControls(session);
+    await loadClassicScript(mainScriptUrl);
+    await loadClassicScript(financialReportUrl);
+    await loadClassicScript(cashRegisterUrl);
+    await loadClassicScript(mobileFixesUrl);
+  }
 } catch (error) {
   console.error(error);
   showBlockingMessage('Não foi possível iniciar o sistema', error.message || 'Erro ao acessar o servidor.');

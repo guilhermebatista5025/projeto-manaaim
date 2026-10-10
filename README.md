@@ -60,7 +60,7 @@ O sistema pode ser instalado como um app no celular ou computador:
 
 ## Configuração
 
-1. Execute o schema em `supabase/migrations/20260919000100_initial_pdv_schema.sql`.
+1. Execute, em ordem, as migrations da pasta `supabase/migrations`.
 2. Crie o arquivo `.env` localmente e preencha `SUPABASE_URL`, `SUPABASE_ANON_KEY` e as quatro variáveis `MASTER_*`.
 3. Instale as dependências com `npm install`.
 4. Inicie frontend e backend com `npm run dev`.
@@ -78,6 +78,39 @@ MASTER_CRISTIANO_PASSWORD=troque-por-outra-senha-forte
 ```
 
 Os e-mails e as senhas devem ser iguais aos dois usuários cadastrados no Supabase Auth. Para trocar um acesso, atualize o usuário no Supabase Auth e os valores correspondentes no `.env`, depois reinicie o servidor. O frontend nunca recebe essas senhas e o cadastro público permanece desativado.
+
+### Acessos do formulário de produtos
+
+Douglas, Jeane, Franciele, Lucilene, Cleidiane e Cantina Maanaim entram pela mesma tela de login, mas são direcionados somente ao formulário. Guilherme está preparado como acesso de teste. Configure os e-mails permitidos no `.env`:
+
+```env
+FORM_GUILHERME_EMAIL=guilherme@exemplo.com
+FORM_DOUGLAS_EMAIL=
+FORM_JEANE_EMAIL=
+FORM_FRANCIELE_EMAIL=
+FORM_LUCILENE_EMAIL=
+FORM_CLEIDIANE_EMAIL=
+FORM_CANTINA_MANAAIM_EMAIL=
+```
+
+Para cada pessoa:
+
+1. Crie o usuário no Supabase Auth com senha forte; não use o celular como senha permanente.
+2. Vincule-o à organização com papel `consulta` e conceda somente permissão de envio ao formulário (substitua o e-mail):
+
+```sql
+update public.organization_members m
+set ativo = true, pode_cadastrar_produtos = true
+from auth.users u, public.organizations o
+where m.user_id = u.id
+  and m.organization_id = o.id
+  and lower(u.email) = lower('usuario@exemplo.com')
+  and lower(o.nome) = lower('Manaaim');
+```
+
+Se o usuário ainda não tiver vínculo, crie-o como `consulta` com `pode_cadastrar_produtos = true`, validando os UUIDs no Dashboard. Depois preencha o respectivo `FORM_*_EMAIL` e reinicie o backend.
+
+A senha nunca é salva no frontend nem nas variáveis `FORM_*`: ela é validada pelo Supabase Auth. O nome do vendedor vem da conta permitida e não pode ser alterado no formulário.
 
 Para produção, execute `npm run build` e depois `npm start`, configurando `NODE_ENV=production`.
 

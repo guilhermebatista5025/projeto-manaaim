@@ -8,7 +8,7 @@
     "dev:frontend": "vite --host 0.0.0.0",
     "dev:backend": "node --watch backend/server.js",
     "build": "vite build",
-    "test": "node --test backend/master-auth.test.js",
+    "test": "node --test backend",
     "start": "node backend/server.js",
     "preview": "vite preview --host 0.0.0.0"
   },

@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#12372a">
+  <title>Entrada de produtos | Manaaim</title>
+  <link rel="icon" href="img/pdv-img.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="is-loading">
+  <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Manaaim">
+      <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 10.5 12 4l8 6.5V20H4z"/><path d="M9 20v-6h6v6"/></svg></span>
+      <span><strong>Manaaim</strong><small>Entrada de produtos</small></span>
+    </a>
+    <div class="account-area">
+      <div class="account-copy"><span>Conectado como</span><strong id="accountName">—</strong></div>
+      <span class="avatar" id="accountAvatar">M</span>
+      <button class="logout" id="logoutButton" type="button" title="Sair" aria-label="Sair da conta"><svg viewBox="0 0 24 24"><path d="M10 17l5-5-5-5M15 12H3M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5"/></svg></button>
+    </div>
+  </header>
+  <main class="shell">
+    <section class="intro">
+      <span class="eyebrow"><i></i> Cadastro conectado ao PDV</span>
+      <h1>Seus produtos,<br><em>direto no estoque.</em></h1>
+      <p>Informe nome, quantidade e valor. Ao confirmar, tudo aparece automaticamente no vendedor identificado pela sua conta.</p>
+      <div class="flow-card" aria-label="Fluxo do cadastro">
+        <div><span>01</span><p><strong>Preencha</strong><small>os dados dos produtos</small></p></div><i></i>
+        <div><span>02</span><p><strong>Confirme</strong><small>o envio ao sistema</small></p></div><i></i>
+        <div><span>03</span><p><strong>Pronto</strong><small>estoque atualizado</small></p></div>
+      </div>
+      <div class="identity-card">
+        <span class="identity-icon"><svg viewBox="0 0 24 24"><path d="M20 21a8 8 0 0 0-16 0M12 13a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z"/></svg></span>
+        <p><small>Vendedor identificado</small><strong id="sellerName">Carregando...</strong><span>O nome é definido pelo seu login.</span></p>
+        <span class="verified" title="Identidade validada"><svg viewBox="0 0 24 24"><path d="m7 12 3 3 7-7"/></svg></span>
+      </div>
+    </section>
+    <section class="form-panel">
+      <div class="panel-head">
+        <div><span class="step-label">NOVO CADASTRO</span><h2>Produtos para entrada</h2><p>Adicione até 50 itens por envio.</p></div>
+        <div class="item-count"><strong id="itemCount">1</strong><span>item</span></div>
+      </div>
+      <form id="productForm" novalidate>
+        <div class="product-list" id="productList"></div>
+        <button class="add-product" id="addProduct" type="button"><span>+</span> Adicionar outro produto</button>
+        <div class="form-message" id="formMessage" role="status" aria-live="polite"></div>
+        <div class="submit-row">
+          <p><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg><span>Envio seguro<br><small>direto ao PDV Manaaim</small></span></p>
+          <button class="submit-button" id="submitButton" type="submit"><span>Enviar ao estoque</span><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+        </div>
+      </form>
+    </section>
+  </main>
+  <div class="loading-screen" id="loadingScreen"><span></span><p>Validando seu acesso...</p></div>
+  <template id="productTemplate">
+    <article class="product-card">
+      <div class="product-title"><span class="product-number">01</span><strong>Produto</strong><button class="remove-product" type="button" aria-label="Remover produto">Remover</button></div>
+      <div class="field field-name"><label>Nome do produto</label><input class="product-name" type="text" maxlength="160" placeholder="Ex.: Bolo de chocolate" autocomplete="off" required><small>Informe como ele deve aparecer no PDV.</small></div>
+      <div class="field-grid">
+        <div class="field"><label>Quantidade</label><div class="number-control"><button class="qty-minus" type="button" aria-label="Diminuir quantidade">−</button><input class="product-quantity" type="number" min="1" max="100000" step="1" value="1" required><button class="qty-plus" type="button" aria-label="Aumentar quantidade">+</button></div></div>
+        <div class="field"><label>Valor unitário</label><div class="money-control"><span>R$</span><input class="product-price" type="text" inputmode="numeric" placeholder="0,00" required></div></div>
+      </div>
+    </article>
+  </template>
+  <script type="module" src="script.js"></script>
+</body>
+</html>

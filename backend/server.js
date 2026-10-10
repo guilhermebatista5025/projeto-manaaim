@@ -13,6 +13,7 @@ import {
   mastersAreConfigured,
   publicMaster,
 } from './master-auth.js';
+import { findFormAccountByEmail, loadFormAccounts, publicFormAccount } from './form-access.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
@@ -22,6 +23,7 @@ const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABA
 const organizationName = process.env.ORGANIZATION_NAME || process.env.VITE_ORGANIZATION_NAME || 'Manaaim';
 const production = process.env.NODE_ENV === 'production';
 const masterAccounts = loadMasterAccounts();
+const formAccounts = loadFormAccounts();
 const masterLoginAttempts = new Map();
 const loginWindowMs = 15 * 60 * 1000;
 const maxLoginAttempts = 5;
@@ -100,13 +102,28 @@ const requireAuth = async (req, res, next) => {
     return res.status(401).json({ error: 'Sessão inválida ou expirada.' });
   }
   const master = findMasterByEmail(masterAccounts, result.data.user.email);
-  if (!master) {
+  const formAccount = findFormAccountByEmail(formAccounts, result.data.user.email);
+  if (!master && !formAccount) {
     clearSessionCookies(res);
-    return res.status(403).json({ error: 'Este usuário não possui acesso master.' });
+    return res.status(403).json({ error: 'Este usuário não está autorizado neste sistema.' });
   }
   req.user = result.data.user;
   req.master = master;
+  req.formAccount = formAccount;
+  req.access = master
+    ? { type: 'master', ...publicMaster(master) }
+    : { type: 'form', ...publicFormAccount(formAccount) };
   req.db = userClient(accessToken);
+  next();
+};
+
+const requireMaster = (req, res, next) => {
+  if (req.access?.type !== 'master') return res.status(403).json({ error: 'Acesso exclusivo dos administradores master.' });
+  next();
+};
+
+const requireFormAccess = (req, res, next) => {
+  if (req.access?.type !== 'form') return res.status(403).json({ error: 'Este acesso não pertence ao formulário de produtos.' });
   next();
 };
 
@@ -116,6 +133,11 @@ const resolveOrganization = async req => {
   let memberships = assertNoError(await req.db.from('organization_members')
     .select('organization_id, role').eq('user_id', req.user.id).eq('ativo', true).limit(1));
   if (!memberships.length) {
+    if (req.access?.type !== 'master') {
+      const error = new Error('Seu usuário ainda não foi vinculado à organização do PDV. Fale com um administrador.');
+      error.status = 403;
+      throw error;
+    }
     assertNoError(await req.db.from('organizations').insert({ nome: organizationName, created_by: req.user.id }));
     memberships = assertNoError(await req.db.from('organization_members')
       .select('organization_id, role').eq('user_id', req.user.id).eq('ativo', true).limit(1));
@@ -127,7 +149,7 @@ const resolveOrganization = async req => {
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 app.get('/api/auth/session', requireAuth, asyncRoute(async (req, res) => {
   const membership = await resolveOrganization(req);
-  res.json({ user: { id: req.user.id, email: req.user.email }, master: publicMaster(req.master), ...membership });
+  res.json({ user: { id: req.user.id, email: req.user.email }, access: req.access, ...membership });
 }));
 app.post('/api/auth/login', loginRateLimit, asyncRoute(async (req, res) => {
   const { email, password } = req.body || {};
@@ -135,25 +157,57 @@ app.post('/api/auth/login', loginRateLimit, asyncRoute(async (req, res) => {
     return res.status(503).json({ error: 'Os dois acessos master ainda não foram configurados no servidor.' });
   }
   if (!email || !password) return res.status(400).json({ error: 'E-mail e senha são obrigatórios.' });
-  const master = findMasterByCredentials(masterAccounts, email, password);
-  if (!master) {
+  const masterByEmail = findMasterByEmail(masterAccounts, email);
+  const formAccount = findFormAccountByEmail(formAccounts, email);
+  const master = masterByEmail ? findMasterByCredentials(masterAccounts, email, password) : null;
+  if ((!masterByEmail && !formAccount) || (masterByEmail && !master)) {
     registerFailedLogin(req);
     return res.status(401).json({ error: 'E-mail ou senha inválidos.' });
   }
   const { data, error } = await authClient.auth.signInWithPassword({ email, password });
   if (error) {
     registerFailedLogin(req);
-    console.warn(`Falha ao autenticar o master ${master.id} no Supabase Auth: ${error.message}`);
+    console.warn(`Falha ao autenticar o acesso ${master?.id || formAccount?.id} no Supabase Auth: ${error.message}`);
     return res.status(401).json({ error: 'E-mail ou senha inválidos.' });
   }
   clearLoginAttempts(req);
   applySessionCookies(res, data.session);
-  res.json({ user: { id: data.user.id, email: data.user.email }, master: publicMaster(master) });
+  const access = master
+    ? { type: 'master', ...publicMaster(master) }
+    : { type: 'form', ...publicFormAccount(formAccount) };
+  res.json({ user: { id: data.user.id, email: data.user.email }, access });
 }));
 app.post('/api/auth/signup', (_req, res) => res.status(403).json({ error: 'Cadastro público desativado.' }));
 app.post('/api/auth/logout', (_req, res) => { clearSessionCookies(res); res.status(204).end(); });
 
 app.use('/api', requireAuth);
+
+app.post('/api/formulario/produtos', requireFormAccess, asyncRoute(async (req, res) => {
+  const { organization_id: org } = await resolveOrganization(req);
+  const items = Array.isArray(req.body?.itens) ? req.body.itens : [];
+  if (!items.length || items.length > 50) return res.status(400).json({ error: 'Informe entre 1 e 50 produtos.' });
+
+  const normalizedItems = items.map((item, index) => {
+    const nome = String(item?.nome || '').trim();
+    const qtd = Number(item?.qtd);
+    const preco = Number(item?.preco);
+    if (!nome || nome.length > 160 || !Number.isInteger(qtd) || qtd < 1 || qtd > 100000 || !Number.isFinite(preco) || preco <= 0) {
+      const error = new Error(`Confira nome, quantidade e valor do produto ${index + 1}.`);
+      error.status = 400;
+      throw error;
+    }
+    return { nome, qtd, preco: Math.round(preco * 100) / 100 };
+  });
+
+  const data = assertNoError(await req.db.rpc('submit_product_form', {
+    p_organization_id: org,
+    p_vendedor_nome: req.formAccount.name,
+    p_items: normalizedItems,
+  }));
+  res.status(201).json(data);
+}));
+
+app.use('/api', requireMaster);
 
 app.get('/api/data', asyncRoute(async (req, res) => {
   const membership = await resolveOrganization(req);
